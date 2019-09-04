@@ -69,26 +69,33 @@ class ViewController: UIViewController {
     // Actions
 
     @IBAction func pickAndTransformImage(_ sender: AnyObject) {
-        let albumRepository = PhotoAlbumRepository()
+        PHPhotoLibrary.requestAuthorization { (status) in
+            switch status {
+            case .authorized:
+                let albumRepository = PhotoAlbumRepository()
 
-        albumRepository.getAlbums { (albums) in
-            let selectedAlbums = albums.filter({ (album) -> Bool in
-                return album.title == "Camera Roll"
-            })
+                albumRepository.getAlbums { (albums) in
+                    let selectedAlbums = albums.filter({ (album) -> Bool in
+                        return album.title == "Camera Roll"
+                    })
 
-            guard let cameraRoll = selectedAlbums.first else { return }
+                    guard let cameraRoll = selectedAlbums.first else { return }
 
-            DispatchQueue.main.async {
-                let vc = self.viewController(with: "PhotosPickerController")
+                    DispatchQueue.main.async {
+                        let vc = self.viewController(with: "PhotosPickerController")
 
-                guard let picker = vc as? PhotosPickerController else {
-                    fatalError("PhotosPickerController type is corrupted")
+                        guard let picker = vc as? PhotosPickerController else {
+                            fatalError("PhotosPickerController type is corrupted")
+                        }
+
+                        picker.delegate = self
+                        picker.configure(with: cameraRoll)
+
+                        self.navigationController!.pushViewController(picker, animated: true)
+                    }
                 }
-
-                picker.delegate = self
-                picker.configure(with: cameraRoll)
-
-                self.navigationController!.pushViewController(picker, animated: true)
+            default:
+                break
             }
         }
     }
@@ -127,19 +134,26 @@ extension ViewController: PhotosPickerControllerDelegate {
             }
 
             // Try to save GIF in photos library, and upon completion, delete temporary file at `outputURL`.
-            PHPhotoLibrary.shared().performChanges({
-                let request = PHAssetCreationRequest.forAsset()
-                request.addResource(with: .photo, fileURL: outputURL, options: nil)
-            }) { (success, error) in
-                // Delete file at temporary location.
-                try? FileManager.default.removeItem(at: outputURL)
+            PHPhotoLibrary.requestAuthorization { (status) in
+                switch status {
+                case .authorized:
+                    PHPhotoLibrary.shared().performChanges({
+                        let request = PHAssetCreationRequest.forAsset()
+                        request.addResource(with: .photo, fileURL: outputURL, options: nil)
+                    }) { (success, error) in
+                        // Delete file at temporary location.
+                        try? FileManager.default.removeItem(at: outputURL)
 
-                DispatchQueue.main.async {
-                    if let error = error {
-                        SVProgressHUD.showError(withStatus: error.localizedDescription)
-                    } else {
-                        SVProgressHUD.showSuccess(withStatus: "GIF animation added to photos album.")
+                        DispatchQueue.main.async {
+                            if let error = error {
+                                SVProgressHUD.showError(withStatus: error.localizedDescription)
+                            } else {
+                                SVProgressHUD.showSuccess(withStatus: "GIF animation added to photos album.")
+                            }
+                        }
                     }
+                default:
+                    break
                 }
             }
         }
