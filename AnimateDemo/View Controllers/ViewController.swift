@@ -20,10 +20,6 @@ private struct Images {
 private let processSize = CGSize(width: 300, height: 300)
 
 class ViewController: UIViewController {
-    private var documentsDirectoryURL: URL? {
-        return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
-    }
-
     private let imageView: UIImageView = {
         // Setup transformed image view
         let imageView = UIImageView(image: UIImage(contentsOfFile: Images.placeholderImageURL.path))
